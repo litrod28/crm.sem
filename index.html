@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM PORTAL SEM - SEM Events Lead Management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <!-- Welcome Popup (Only shown after successful login) -->
+    <div id="welcomePopup" class="modal hidden">
+        <div class="modal-content welcome-popup">
+            <h2>Welcome, <span id="welcomeUserName"></span>!</h2>
+        </div>
+    </div>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>CRM PORTAL SEM</h1>
+                <p>SEM Events Lead Management System</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username" class="form-label">Username</label>
+                    <input type="text" id="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <input type="password" id="password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+            </form>
+            <div id="loginError" class="error-message hidden"></div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="dashboard hidden">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <h1>CRM PORTAL SEM</h1>
+                <div class="header-actions">
+                    <span id="currentUser" class="current-user"></span>
+                    <button id="logoutBtn" class="btn btn--outline btn--sm">Logout</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="dashboard-nav">
+            <div class="nav-tabs" id="navTabs">
+                <!-- Dynamic tabs will be inserted here -->
+            </div>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="dashboard-content">
+            <!-- User Dashboard Tab -->
+            <div id="userTab" class="tab-content">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Leads Added</h3>
+                        <div class="stat-number" id="userLeadsCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Follow-ups Today</h3>
+                        <div class="stat-number" id="userFollowupsToday">0</div>
+                    </div>
+                </div>
+                <div class="dashboard-sections">
+                    <div class="section">
+                        <h3>Overdue Follow-ups</h3>
+                        <div id="overdueFollowups" class="followup-list"></div>
+                    </div>
+                    <div class="section">
+                        <h3>Today's Follow-up Reminders</h3>
+                        <div id="todayFollowups" class="followup-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Lead Tab -->
+            <div id="addLeadTab" class="tab-content hidden">
+                <div class="form-container">
+                    <h2>Add New Lead</h2>
+                    <form id="addLeadForm" class="lead-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="eventName" class="form-label">Event Name</label>
+                                <input type="text" id="eventName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="organisingSociety" class="form-label">Organising Society</label>
+                                <input type="text" id="organisingSociety" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contactPerson" class="form-label">Contact Person</label>
+                                <input type="text" id="contactPerson" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="phoneNo" class="form-label">Phone Number</label>
+                                <input type="tel" id="phoneNo" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" id="email" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="leadStage" class="form-label">Lead Stage</label>
+                                <select id="leadStage" class="form-control" required>
+                                    <option value="">Select Stage</option>
+                                    <option value="HOT">HOT</option>
+                                    <option value="WRM">WRM</option>
+                                    <option value="CLD">CLD</option>
+                                    <option value="NI">NI</option>
+                                    <option value="NRE">NRE</option>
+                                    <option value="JUNK">JUNK</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="remarks" class="form-label">Remarks</label>
+                                <textarea id="remarks" class="form-control" rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="followupDate" class="form-label">Follow-up Date</label>
+                                <input type="date" id="followupDate" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row" id="assignToRow" style="display: none;">
+                            <div class="form-group">
+                                <label for="assignTo" class="form-label">Assign To</label>
+                                <select id="assignTo" class="form-control">
+                                    <!-- Options will be populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn--primary">Add Lead</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- My Leads / All Leads Tab -->
+            <div id="leadsTab" class="tab-content hidden">
+                <div class="leads-section">
+                    <div class="section-header">
+                        <h2 id="leadsTabTitle">My Leads</h2>
+                        <div class="leads-filters" id="leadsFilters" style="display: none;">
+                            <select id="userFilter" class="form-control">
+                                <option value="">All Users</option>
+                            </select>
+                            <input type="date" id="dateFilter" class="form-control">
+                            <button id="clearFilters" class="btn btn--outline btn--sm">Clear</button>
+                        </div>
+                    </div>
+                    <div class="leads-table-container">
+                        <table class="leads-table" id="leadsTable">
+                            <thead>
+                                <tr>
+                                    <th>Event Name</th>
+                                    <th>Society</th>
+                                    <th>Contact Person</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Stage</th>
+                                    <th>Added By</th>
+                                    <th>Added On</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Tab -->
+            <div id="followupTab" class="tab-content hidden">
+                <div class="followup-section">
+                    <h2>Follow-up Management</h2>
+                    <div class="followup-categories">
+                        <div class="followup-category">
+                            <h3>Today's Follow-ups</h3>
+                            <div id="todayFollowupsList" class="followup-items"></div>
+                        </div>
+                        <div class="followup-category">
+                            <h3>Overdue Follow-ups</h3>
+                            <div id="overdueFollowupsList" class="followup-items"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report Tab -->
+            <div id="reportTab" class="tab-content hidden">
+                <div class="report-section">
+                    <div class="report-header">
+                        <h2>User Performance Report</h2>
+                        <div class="report-filters">
+                            <input type="date" id="reportDate" class="form-control">
+                            <button id="generateReport" class="btn btn--primary">Generate Report</button>
+                        </div>
+                    </div>
+                    <div class="report-content">
+                        <table class="report-table" id="reportTable">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Leads Registered</th>
+                                    <th>Follow-ups Completed</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Panel Tab -->
+            <div id="adminTab" class="tab-content hidden">
+                <div class="admin-section">
+                    <h2>System Administration</h2>
+                    <div class="admin-actions">
+                        <div class="admin-card">
+                            <h3>User Management</h3>
+                            <div class="admin-controls">
+                                <button id="addUserBtn" class="btn btn--primary">Add New User</button>
+                                <button id="manageUsersBtn" class="btn btn--secondary">Manage Users</button>
+                                <button id="resetPasswordBtn" class="btn btn--outline">Reset Passwords</button>
+                            </div>
+                        </div>
+                        <div class="admin-card">
+                            <h3>System Settings</h3>
+                            <div class="admin-controls">
+                                <button id="exportDataBtn" class="btn btn--secondary">Export All Data</button>
+                                <button id="systemLogsBtn" class="btn btn--outline">View System Logs</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="userManagementPanel" class="user-management hidden">
+                        <h3>Users List</h3>
+                        <div id="usersList" class="users-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="leadDetailsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Lead Details</h3>
+                <button class="close-btn" onclick="closeModal('leadDetailsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="leadDetailsBody">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <div id="followupModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Follow-up</h3>
+                <button class="close-btn" onclick="closeModal('followupModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="followupForm">
+                    <input type="hidden" id="followupLeadId">
+                    <div class="form-group">
+                        <label for="followupDateModal" class="form-label">Follow-up Date</label>
+                        <input type="date" id="followupDateModal" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="followupRemarks" class="form-label">Remarks</label>
+                        <textarea id="followupRemarks" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn--outline" onclick="closeModal('followupModal')">Cancel</button>
+                        <button type="submit" class="btn btn--primary">Add Follow-up</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="userModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="userModalTitle">Add User</h3>
+                <button class="close-btn" onclick="closeModal('userModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userFormMode">
+                    <input type="hidden" id="editUserId">
+                    <div class="form-group">
+                        <label for="newUsername" class="form-label">Username</label>
+                        <input type="text" id="newUsername" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newName" class="form-label">Display Name</label>
+                        <input type="text" id="newName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword" class="form-label">Password</label>
+                        <input type="password" id="newPassword" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newRole" class="form-label">Role</label>
+                        <select id="newRole" class="form-control" required>
+                            <option value="user">User</option>
+                            <option value="sem">SEM Operations</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn--outline" onclick="closeModal('userModal')">Cancel</button>
+                        <button type="submit" class="btn btn--primary" id="userFormSubmit">Save User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
